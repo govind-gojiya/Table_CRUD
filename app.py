@@ -4,9 +4,11 @@ import time
 import pandas as pd
 
 db=cursor=None
-st.session_state.updateMentor = ""
-st.session_state.updateTech = 0
-st.session_state.updateStiphend = 0.00
+if 'isUpdating' not in st.session_state:
+    st.session_state.isUpdating = False
+    st.session_state.updateMentor = ""
+    st.session_state.updateTech = 0
+    st.session_state.updateStiphend = 0.00
 
 # Connecting database
 try: 
@@ -75,45 +77,43 @@ st.divider()
 
 def updateTrainee():
     if st.session_state.isUpdating:
-        updateTraineeSQL = "UPDATE TRAINEES SET TECHNOLOGY = %s AND MENTOR = %s AND  STIPHEND = %s WHERE NAME = %s"
-        updateDetails = (st.session_state.updateInternTechnology, st.session_state.updateInternMentor, st.session_state.updateInternStiphend, st.session_statex.updateTrainee)
+        updateTraineeSQL = "UPDATE TRAINEES SET TECHNOLOGY = %s, MENTOR = %s,  STIPHEND = %s WHERE NAME = %s"
+        updateDetails = (st.session_state.updateInternTechnology, st.session_state.updateInternMentor, round(st.session_state.updateInternStiphend, 2), st.session_state.updateTrainee)
         try:
             cursor.execute(updateTraineeSQL, updateDetails)
             db.commit()
-            st.toast(f'Hooray! Updated details having id as {cursor.lastrowid}', icon='🎉')
+            st.session_state.isUpdating = False
+            st.toast(f'Hooray! Updated details successfully', icon='🎉')
             time.sleep(0.3)
-        except:
+        except Exception as e:
+            print(e)
             db.rollback()
     else:
         st.toast("Not callable like this.")
 
 def traineeDetails():
-        st.session_state.isUpdating = False
         whereCluseForOne = f"WHERE NAME = \"{st.session_state.updateTrainee}\""
         getTraineeDetails = getTrainees(whereCluseForOne)
-        print(getTraineeDetails)
         st.session_state.updateTech = techstack.index(getTraineeDetails.iloc[0]["TECHNOLOGY"])
         st.session_state.updateMentor = getTraineeDetails.iloc[0]["MENTOR"]
         st.session_state.updateStiphend = getTraineeDetails.iloc[0]["STIPHEND"]
-        print(st.session_state.updateTech, st.session_state.updateMentor, st.session_state.updateStiphend)
 
 
 # interface for update trainee
 with st.container(border=True):
-    
     st.title("Update Trainee Details")
     allIntern = getTrainees()
     st.selectbox("Select Trainee to update details:", allIntern.iloc[0:,0:1], index=None, key="updateTrainee")
-    updateForm = st.form("update")
-    isFinding = updateForm.form_submit_button("Find", type="primary", use_container_width=True)
+    isFinding = st.button("Find", type="primary", use_container_width=True)
     if isFinding:
         traineeDetails()
+        st.session_state.isUpdating = True
+    
+    if st.session_state.isUpdating:
         mentorCol, technoCol, stiphendCol = st.columns(3)
-        print("Data : ",st.session_state.updateMentor)
-        updateMentor = mentorCol.text_input("Mentor Name", value=st.session_state.updateMentor, placeholder="Hima Soni", key="updateInternMentor")
-        updateTechno = technoCol.selectbox("Assigned Technology", techstack, index=st.session_state.updateTech, key="updateInternTechnology")
-        updateStiphend = stiphendCol.number_input("Stiphend", value=st.session_state.updateStiphend, placeholder=0.00, key="updateInternStiphend")
-        updateStiphend = round(updateStiphend, 2)
+        mentorCol.text_input("Mentor Name", value=st.session_state.updateMentor, placeholder="Hima Soni", key="updateInternMentor")
+        technoCol.selectbox("Assigned Technology", techstack, index=st.session_state.updateTech, key="updateInternTechnology")
+        stiphendCol.number_input("Stiphend", value=st.session_state.updateStiphend, placeholder=0.00, key="updateInternStiphend")
         st.button("Update Info", on_click=updateTrainee, type="primary", use_container_width=True)
 
 with st.container(border=True):
