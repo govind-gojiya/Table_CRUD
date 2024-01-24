@@ -4,6 +4,9 @@ import time
 import pandas as pd
 
 db=cursor=None
+st.session_state.updateMentor = ""
+st.session_state.updateTech = 0
+st.session_state.updateStiphend = 0.00
 
 # Connecting database
 try: 
@@ -24,7 +27,7 @@ techstack = ["AI/ML", ".Net and Angular", "DevOps", "React JS", "Node JS", "Pyth
 # adding new trainee details to database
 def addIntern(**intern):
     addQuery = "INSERT INTO TRAINEES (NAME, TECHNOLOGY, MENTOR, STIPHEND) VALUES (%s, %s, %s, %s)"
-    newIntern = (st.session_state.internName, st.session_state.internMentor, st.session_state.internTechnology, st.session_state.internStiphend)
+    newIntern = (st.session_state.internName, st.session_state.internTechnology, st.session_state.internMentor, st.session_state.internStiphend)
 
     try:
         cursor.execute(addQuery, newIntern)
@@ -63,7 +66,7 @@ def getTrainees(trainee = ""):
     except Exception as e:
         print("Error in fetching. trainees details !!!", " \nError: ", e)
 
-# call to show trainees data
+# interface to show trainees data
 with st.container(border=True):
     st.title("All Trainees")
     st.table(getTrainees())
@@ -89,22 +92,29 @@ def traineeDetails():
         whereCluseForOne = f"WHERE NAME = \"{st.session_state.updateTrainee}\""
         getTraineeDetails = getTrainees(whereCluseForOne)
         print(getTraineeDetails)
-        st.session_state.updateTech = getTraineeDetails.iloc[1:,1:2]
-        st.session_state.updateMentor = getTraineeDetails.iloc[1:,2:3]
-        st.session_state.updateStiphend = getTraineeDetails.iloc[1:,3:4]
+        st.session_state.updateTech = techstack.index(getTraineeDetails.iloc[0]["TECHNOLOGY"])
+        st.session_state.updateMentor = getTraineeDetails.iloc[0]["MENTOR"]
+        st.session_state.updateStiphend = getTraineeDetails.iloc[0]["STIPHEND"]
+        print(st.session_state.updateTech, st.session_state.updateMentor, st.session_state.updateStiphend)
+
 
 # interface for update trainee
 with st.container(border=True):
-    st.session_state.isUpdating = True
-    st.session_state.updateMentor = ""
+    
     st.title("Update Trainee Details")
     allIntern = getTrainees()
-    st.selectbox("Select Trainee to update details:", allIntern.iloc[0:,0:1], index=None, on_change=traineeDetails, key="updateTrainee")
-    mentorCol, technoCol, stiphendCol = st.columns(3)
-    updateMentor = mentorCol.text_input("Mentor Name", value=st.session_state.updateMentor, placeholder="Hima Soni", key="updateInternMentor", disabled=st.session_state.isUpdating)
-    updateTechno = technoCol.selectbox("Assigned Technology", techstack, key="updateInternTechnology", disabled=st.session_state.isUpdating)
-    updateStiphend = stiphendCol.number_input("Stiphend", placeholder=0.00, key="updateInternStiphend", disabled=st.session_state.isUpdating)
-    updateStiphend = round(updateStiphend, 2)
-    st.button("Update Details", on_click=updateTrainee, type="primary", use_container_width=True, disabled=st.session_state.isUpdating)
+    st.selectbox("Select Trainee to update details:", allIntern.iloc[0:,0:1], index=None, key="updateTrainee")
+    updateForm = st.form("update")
+    isFinding = updateForm.form_submit_button("Find", type="primary", use_container_width=True)
+    if isFinding:
+        traineeDetails()
+        mentorCol, technoCol, stiphendCol = st.columns(3)
+        print("Data : ",st.session_state.updateMentor)
+        updateMentor = mentorCol.text_input("Mentor Name", value=st.session_state.updateMentor, placeholder="Hima Soni", key="updateInternMentor")
+        updateTechno = technoCol.selectbox("Assigned Technology", techstack, index=st.session_state.updateTech, key="updateInternTechnology")
+        updateStiphend = stiphendCol.number_input("Stiphend", value=st.session_state.updateStiphend, placeholder=0.00, key="updateInternStiphend")
+        updateStiphend = round(updateStiphend, 2)
+        st.button("Update Info", on_click=updateTrainee, type="primary", use_container_width=True)
 
-
+with st.container(border=True):
+    st.title("Delete Trainee Details")
