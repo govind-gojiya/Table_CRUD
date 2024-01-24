@@ -10,6 +10,9 @@ if 'isUpdating' not in st.session_state:
     st.session_state.updateTech = 0
     st.session_state.updateStiphend = 0.00
 
+if 'isDeleting' not in st.session_state:
+    st.session_state.isdelteAttrReady = True
+
 # Connecting database
 try: 
     db = sql.connect(
@@ -108,7 +111,6 @@ with st.container(border=True):
     if isFinding:
         traineeDetails()
         st.session_state.isUpdating = True
-    
     if st.session_state.isUpdating:
         mentorCol, technoCol, stiphendCol = st.columns(3)
         mentorCol.text_input("Mentor Name", value=st.session_state.updateMentor, placeholder="Hima Soni", key="updateInternMentor")
@@ -116,5 +118,44 @@ with st.container(border=True):
         stiphendCol.number_input("Stiphend", value=st.session_state.updateStiphend, placeholder=0.00, key="updateInternStiphend")
         st.button("Update Info", on_click=updateTrainee, type="primary", use_container_width=True)
 
+st.divider()
+
+def deleteTrainees(*record):
+    if st.session_state.isDeleting:
+        deleteTraineeSQL = f"DELETE FROM TRAINEES WHERE {st.session_state.deleteAttr} = %s"
+        deleteDetails = (''.join(record), )
+        print("Delete data: ", deleteDetails)
+        try:
+            cursor.execute(deleteTraineeSQL, deleteDetails)
+            db.commit()
+            st.session_state.isDeleting = False
+            st.toast(f'Hooray! Deleted details successfully', icon='🎉')
+            time.sleep(0.3)
+        except Exception as e:
+            print(e)
+            db.rollback()
+    else:
+        st.toast("Not callable like this.")
+
 with st.container(border=True):
     st.title("Delete Trainee Details")
+    allMetaData = getTrainees("WHERE FALSE")
+    st.selectbox("Select any attribute from which you want to delete:", allMetaData.columns, index=None, key="deleteAttr")
+    st.button("Set Attribute", type="primary", use_container_width=True, key="isDeleteAttrSet")
+
+    if st.session_state.isDeleteAttrSet:
+        getTraineeDetails = getTrainees()
+        st.session_state.isdelteAttrReady = False
+        st.session_state.setAttrDelete = getTraineeDetails.iloc[0:][st.session_state.deleteAttr].tolist()
+        deleteTrainee = st.write(st.session_state.setAttrDelete)
+        st.text_input("Enter Index  of trainee which you want to delete:", key="deleteTrainee")
+
+    st.button("Find Records", type="primary", use_container_width=True, key="isShowingRecord", disabled=st.session_state.isdelteAttrReady)
+    
+    if st.session_state.isShowingRecord:
+        whereClauseToDelete = f'WHERE {st.session_state.deleteAttr} = "{st.session_state.deleteTrainee}"'
+        getListTraineeDelete = getTrainees(whereClauseToDelete)
+        st.table(getListTraineeDelete)
+        st.session_state.isDeleting = True
+        isFinalToDelete = st.button("Delete Records", type="primary", use_container_width=True, args=st.session_state.deleteTrainee, on_click=deleteTrainees)
+
